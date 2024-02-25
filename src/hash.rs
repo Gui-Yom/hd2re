@@ -64,8 +64,8 @@ pub fn stringray_hash(key: &[u8]) -> u64 {
 }
 
 #[derive(Default)]
-pub(crate) struct NoHash;
-pub(crate) struct NoHashHasher(u64);
+pub struct NoHash;
+pub struct NoHashHasher(u64);
 
 impl Hasher for NoHashHasher {
     fn finish(&self) -> u64 {

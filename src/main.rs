@@ -1,7 +1,7 @@
 use speedy::{Readable, Writable};
 
 use hd2re::index::HD2Index;
-use hd2re::sniff::MagikaSniff;
+use hd2re::sniff::{LibMagicSniff, MagikaSniff};
 
 fn main() {
     // println!("{:x}", stringray_hash(b"packages/pre_boot"));
@@ -26,5 +26,17 @@ fn main() {
         sniff.write_to_file("hd2sniff.magika.bin").unwrap();
         sniff
     };
-    dbg!(magika_sniff);
+    // dbg!(magika_sniff);
+    let libmagic_sniff = if let Ok(sniff) = LibMagicSniff::read_from_file("hd2sniff.libmagic.bin") {
+        println!("Loading saved libmagic sniff.");
+        sniff
+    } else {
+        println!("No libmagic sniff available.");
+        let sniff = LibMagicSniff::run(&index);
+        sniff.write_to_file("hd2sniff.libmagic.bin").unwrap();
+        sniff
+    };
+    for (key, label) in libmagic_sniff.results.iter().take(10) {
+        println!("{key:016x}: {label}");
+    }
 }

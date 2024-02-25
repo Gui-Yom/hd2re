@@ -1,5 +1,6 @@
 use std::num::NonZeroUsize;
 
+use magic::cookie::{DatabasePaths, Flags};
 use magika::MagikaSession;
 use ort::{
     CUDAExecutionProvider, DirectMLExecutionProvider, ExecutionProvider, GraphOptimizationLevel,
@@ -23,9 +24,33 @@ pub(crate) fn sniff_wav(index: &HD2Index) {
 }
 
 #[derive(Debug, Readable, Writable)]
+pub struct LibMagicSniff {
+    pub results: AssetMap<String>,
+}
+
+impl LibMagicSniff {
+    pub fn run(index: &HD2Index) -> Self {
+        println!("Using libmagic {}", magic::libmagic_version());
+        let cookie = magic::Cookie::open(Flags::empty())
+            .unwrap()
+            .load(&[r#"C:\apps\vcpkg\packages\libmagic_x64-windows-static-md\share\libmagic\misc\magic.mgc"#].try_into().unwrap())
+            .unwrap();
+        let mut map = AssetMap::with_capacity_and_hasher(index.len(), NoHash);
+        for (i, key) in index.ids().enumerate() {
+            let bytes = index.load_data_bytes(key).unwrap();
+            map.insert(key, cookie.buffer(bytes.as_slice()).unwrap());
+            if i % 1000 == 0 {
+                println!("Processed {i}/{}", index.len());
+            }
+        }
+        Self { results: map }
+    }
+}
+
+#[derive(Debug, Readable, Writable)]
 pub struct MagikaSniff {
-    labels: Vec<String>,
-    results: AssetMap<[(f32, u32); 3]>,
+    pub labels: Vec<String>,
+    pub results: AssetMap<[(f32, u32); 3]>,
 }
 
 impl MagikaSniff {
