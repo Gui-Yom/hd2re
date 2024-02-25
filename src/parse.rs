@@ -24,7 +24,7 @@ pub struct TypeHeader {
     pub data_header_size: u32,
 }
 
-#[derive(BinRead, Debug, Readable, Writable)]
+#[derive(BinRead, Debug, Readable, Writable, Eq, PartialEq)]
 #[br(repr = u64)]
 #[speedy(tag_type = u64)]
 #[repr(u64)]
@@ -36,14 +36,14 @@ pub enum DataType {
     Unknown5 = 0xAB2F78E885F513C6,
     Unknown6 = 0x535A7BD3E650D799,
     Unknown7 = 0xAF32095C82F2B070,
-    /// Wav audio
-    Wav = 0x504B55235D21440E,
+    /// WWise WEM audio
+    WEM = 0x504B55235D21440E,
     Unknown9 = 0xE985C5F61C169997,
     Unknown10 = 0x250E0A11AC8E26F8,
     Unknown11 = 0x9831CA893B0D087D,
     Unknown12 = 0x1D59BD6687DB6B33,
     Unknown13 = 0x57A13425279979D7,
-    Unknown14 = 0xAA5965F03029FA18,
+    BinkVideo = 0xAA5965F03029FA18,
     Unknown15 = 0xC4F0F4BE7FB0C8D6,
     Unknown16 = 0xD7014A50477953E0,
     Unknown17 = 0xFE73C7DCFF8A7CA5,
@@ -76,6 +76,22 @@ pub enum DataType {
     Material = 0xEAC0B497876ADEDF,
     Map = 0x2A690FD348FE9AC5,
     Strings = 0x0D972BAB10B40FD3,
+}
+
+impl DataType {
+    pub fn is_known(&self) -> bool {
+        matches!(
+            self,
+            DataType::Map
+                | DataType::Havok
+                | DataType::Strings
+                | DataType::BinkVideo
+                | DataType::Model
+                | DataType::Material
+                | DataType::Texture
+                | DataType::WEM
+        )
+    }
 }
 
 #[derive(BinRead, Debug, Readable, Writable)]

@@ -3,7 +3,6 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::ops::Index;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::time::Instant;
 use std::{fs, io};
 
@@ -53,13 +52,15 @@ impl HD2Index {
     }
 
     pub fn resolve_data_file(&self, id: u64) -> PathBuf {
-        let mut file = PathBuf::from_str(&self.base_dir).unwrap();
-        file.push(format!("{id:016x}"));
-        file
+        Path::new(&self.base_dir).join(format!("{id:016x}"))
     }
 
     pub fn resolve_stream_file(&self, id: u64) -> PathBuf {
         self.resolve_data_file(id).with_extension("stream")
+    }
+
+    pub fn resolve_gpu_file(&self, id: u64) -> PathBuf {
+        self.resolve_data_file(id).with_extension("gpu_resources")
     }
 
     pub fn load_data_bytes(&self, id: u64) -> io::Result<Vec<u8>> {
@@ -83,6 +84,15 @@ impl HD2Index {
         Ok(buf)
     }
 
+    pub fn load_stream_bytes(&self, id: u64) -> io::Result<Vec<u8>> {
+        let Entry { file_id, record } = &self.items[&id];
+        let mut file = File::open(self.resolve_stream_file(*file_id))?;
+        let mut buf = vec![0; record.stream_size as usize];
+        file.seek(SeekFrom::Start(record.stream_offset as u64))?;
+        file.read(&mut buf)?;
+        Ok(buf)
+    }
+
     pub fn load_n_stream_bytes<const N: usize>(&self, id: u64) -> io::Result<[u8; N]> {
         let Entry { file_id, record } = &self.items[&id];
         if record.stream_size < N as u32 {
@@ -91,6 +101,27 @@ impl HD2Index {
         let mut file = File::open(self.resolve_stream_file(*file_id))?;
         let mut buf = [0; N];
         file.seek(SeekFrom::Start(record.stream_offset as u64))?;
+        file.read(&mut buf)?;
+        Ok(buf)
+    }
+
+    pub fn load_gpu_bytes(&self, id: u64) -> io::Result<Vec<u8>> {
+        let Entry { file_id, record } = &self.items[&id];
+        let mut file = File::open(self.resolve_gpu_file(*file_id))?;
+        let mut buf = vec![0; record.gpu_size as usize];
+        file.seek(SeekFrom::Start(record.gpu_offset))?;
+        file.read(&mut buf)?;
+        Ok(buf)
+    }
+
+    pub fn load_n_gpu_bytes<const N: usize>(&self, id: u64) -> io::Result<[u8; N]> {
+        let Entry { file_id, record } = &self.items[&id];
+        if record.gpu_size < N as u32 {
+            return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
+        }
+        let mut file = File::open(self.resolve_gpu_file(*file_id))?;
+        let mut buf = [0; N];
+        file.seek(SeekFrom::Start(record.gpu_offset))?;
         file.read(&mut buf)?;
         Ok(buf)
     }

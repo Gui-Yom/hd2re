@@ -1,6 +1,9 @@
+use std::fs;
+
 use speedy::{Readable, Writable};
 
 use hd2re::index::HD2Index;
+use hd2re::parse::DataType;
 use hd2re::sniff::{LibMagicSniff, MagikaSniff};
 
 fn main() {
@@ -26,7 +29,20 @@ fn main() {
         sniff.write_to_file("hd2sniff.magika.bin").unwrap();
         sniff
     };
-    // dbg!(magika_sniff);
+    // for (&key, [data, stream, gpu]) in magika_sniff.results.iter() {
+    //     if !index[key].record.type_id.is_known() {
+    //         println!(
+    //             "{key:016x} ({:?}): ({}, {}), ({}, {}), ({}, {})",
+    //             index[key].record.type_id,
+    //             data[0].0,
+    //             &magika_sniff.labels[data[0].1 as usize],
+    //             stream[0].0,
+    //             &magika_sniff.labels[stream[0].1 as usize],
+    //             gpu[0].0,
+    //             &magika_sniff.labels[gpu[0].1 as usize]
+    //         );
+    //     }
+    // }
     let libmagic_sniff = if let Ok(sniff) = LibMagicSniff::read_from_file("hd2sniff.libmagic.bin") {
         println!("Loading saved libmagic sniff.");
         sniff
@@ -36,7 +52,28 @@ fn main() {
         sniff.write_to_file("hd2sniff.libmagic.bin").unwrap();
         sniff
     };
-    for (key, label) in libmagic_sniff.results.iter().take(10) {
-        println!("{key:016x}: {label}");
+    // for (&key, (data, stream, gpu)) in &libmagic_sniff.results {
+    //     if !index[key].record.type_id.is_known()
+    //         && !(LibMagicSniff::guess_is_worthless(data)
+    //             && LibMagicSniff::guess_is_worthless(stream)
+    //             && LibMagicSniff::guess_is_worthless(gpu))
+    //     {
+    //         println!(
+    //             "{key:016x} ({:?}): {data}, {stream}, {gpu}",
+    //             index[key].record.type_id
+    //         );
+    //     }
+    // }
+
+    // Dump WAV
+    fs::create_dir_all("dump/audio").unwrap();
+    for key in index.ids() {
+        if index[key].record.type_id == DataType::WEM {
+            fs::write(
+                format!("dump/audio/{key:016x}.wem"),
+                index.load_stream_bytes(key).unwrap(),
+            )
+            .unwrap();
+        }
     }
 }

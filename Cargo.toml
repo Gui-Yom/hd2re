@@ -15,7 +15,7 @@ magic = "0.16"
 
 # Uses my fixed version
 magika = { version = "0.1.0-dev", path = "../magika/rust", optional = true }
-ort = { version = "2.0.0-rc.0", default-features = false, features = ["download-binaries", "directml"], optional = true }
+ort = { version = "2.0.0-rc.0", default-features = false, features = ["download-binaries", "directml", "cuda", "tensorrt", "load-dynamic"], optional = true }
 
 [features]
 default = ["sniff-magika"]

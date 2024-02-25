@@ -1,10 +1,8 @@
-use std::num::NonZeroUsize;
-
-use magic::cookie::{DatabasePaths, Flags};
+use magic::cookie::Flags;
 use magika::MagikaSession;
 use ort::{
     CUDAExecutionProvider, DirectMLExecutionProvider, ExecutionProvider, GraphOptimizationLevel,
-    Session, TensorRTExecutionProvider, XNNPACKExecutionProvider,
+    Session, TensorRTExecutionProvider,
 };
 use speedy::{Readable, Writable};
 
@@ -25,7 +23,7 @@ pub(crate) fn sniff_wav(index: &HD2Index) {
 
 #[derive(Debug, Readable, Writable)]
 pub struct LibMagicSniff {
-    pub results: AssetMap<String>,
+    pub results: AssetMap<(String, String, String)>,
 }
 
 impl LibMagicSniff {
@@ -35,27 +33,46 @@ impl LibMagicSniff {
             .unwrap()
             .load(&[r#"C:\apps\vcpkg\packages\libmagic_x64-windows-static-md\share\libmagic\misc\magic.mgc"#].try_into().unwrap())
             .unwrap();
-        let mut map = AssetMap::with_capacity_and_hasher(index.len(), NoHash);
+        let mut results = AssetMap::with_capacity_and_hasher(index.len(), NoHash);
         for (i, key) in index.ids().enumerate() {
-            let bytes = index.load_data_bytes(key).unwrap();
-            map.insert(key, cookie.buffer(bytes.as_slice()).unwrap());
+            let data = index
+                .load_data_bytes(key)
+                .map(|b| cookie.buffer(b.as_slice()).unwrap())
+                .unwrap_or(String::new());
+            let stream = index
+                .load_stream_bytes(key)
+                .map(|b| cookie.buffer(b.as_slice()).unwrap())
+                .unwrap_or(String::new());
+            let gpu = index
+                .load_gpu_bytes(key)
+                .map(|b| cookie.buffer(b.as_slice()).unwrap())
+                .unwrap_or(String::new());
+            results.insert(key, (data, stream, gpu));
             if i % 1000 == 0 {
                 println!("Processed {i}/{}", index.len());
             }
         }
-        Self { results: map }
+        Self { results }
+    }
+
+    pub fn guess_is_worthless(guess: &str) -> bool {
+        matches!(guess, "data" | "empty" | "")
     }
 }
 
 #[derive(Debug, Readable, Writable)]
 pub struct MagikaSniff {
     pub labels: Vec<String>,
-    pub results: AssetMap<[(f32, u32); 3]>,
+    pub results: AssetMap<[[(f32, u32); 3]; 3]>,
 }
 
 impl MagikaSniff {
     pub fn run(index: &HD2Index) -> Self {
-        ort::init().commit().unwrap();
+        ort::init_from(
+            r#"C:\Users\Guillaume\Desktop\onnxruntime\build\Windows\Release\onnxruntime.dll"#,
+        )
+        .commit()
+        .unwrap();
         let session_builder = Session::builder()
             .unwrap()
             .with_parallel_execution(true)
@@ -71,21 +88,17 @@ impl MagikaSniff {
             print!("DIRECTML ");
             directml.register(&session_builder);
         }
-        let tensorrt = TensorRTExecutionProvider::default();
+        let tensorrt = TensorRTExecutionProvider::default()
+            .with_timing_cache(true)
+            .with_engine_cache(true);
         if tensorrt.is_available().unwrap() {
             print!("TENSORRT ");
-            tensorrt.register(&session_builder);
+            tensorrt.register(&session_builder).unwrap();
         }
         let cuda = CUDAExecutionProvider::default();
         if cuda.is_available().unwrap() {
             print!("CUDA ");
-            cuda.register(&session_builder);
-        }
-        let xnnpack = XNNPACKExecutionProvider::default()
-            .with_intra_op_num_threads(NonZeroUsize::new(4).unwrap());
-        if xnnpack.is_available().unwrap() {
-            print!("XNNPACK ");
-            xnnpack.register(&session_builder);
+            cuda.register(&session_builder).unwrap();
         }
         println!();
 
@@ -95,17 +108,28 @@ impl MagikaSniff {
         )
         .unwrap();
         println!("Running inference");
-        let mut map = AssetMap::with_capacity_and_hasher(index.len(), NoHash);
+        let mut results = AssetMap::with_capacity_and_hasher(index.len(), NoHash);
         for (i, key) in index.ids().enumerate() {
-            let bytes = index.load_data_bytes(key).unwrap();
-            map.insert(key, magika.identify_topk::<3>(bytes.as_slice()).unwrap());
+            let data = index
+                .load_data_bytes(key)
+                .map(|b| magika.identify_topk::<3>(b.as_slice()).unwrap())
+                .unwrap_or([(0.0, 0); 3]);
+            let stream = index
+                .load_stream_bytes(key)
+                .map(|b| magika.identify_topk::<3>(b.as_slice()).unwrap())
+                .unwrap_or([(0.0, 0); 3]);
+            let gpu = index
+                .load_gpu_bytes(key)
+                .map(|b| magika.identify_topk::<3>(b.as_slice()).unwrap())
+                .unwrap_or([(0.0, 0); 3]);
+            results.insert(key, [data, stream, gpu]);
             if i % 1000 == 0 {
                 println!("Processed {i}/{}", index.len());
             }
         }
         Self {
             labels: magika.labels().to_vec(),
-            results: map,
+            results,
         }
     }
 }
