@@ -6,7 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# Parsing HD2 files declaratively
 binrw = "0.13.*"
+# Indexes storage
 speedy = "0.8.*"
-magika = { version = "0.1.0-dev", path = "../magika/rust" }
-onnxruntime = "0.0.14"
+
+# Uses my fixed version
+magika = { version = "0.1.0-dev", path = "../magika/rust", optional = true }
+ort = { version = "2.0.0-rc.0", default-features = false, features = ["download-binaries", "directml"], optional = true }
+
+[features]
+default = ["sniff-magika"]
+# Content sniffing with magika, this pulls a deep learning model and onnxruntime
+sniff-magika = ["magika", "ort"]

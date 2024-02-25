@@ -1,7 +1,7 @@
 use std::hash::{BuildHasher, Hasher};
 
 /// murmur64a with a seed of 0
-pub(crate) fn stringray_hash(key: &[u8]) -> u64 {
+pub fn stringray_hash(key: &[u8]) -> u64 {
     let m: u64 = 0xc6a4a7935bd1e995;
     let r: u8 = 47;
 
