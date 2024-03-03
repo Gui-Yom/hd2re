@@ -10,8 +10,10 @@ edition = "2021"
 binrw = "0.13.*"
 # Indexes storage
 speedy = "0.8.*"
-
-magic = "0.16"
+# enum macros
+strum = { version = "0.26.*", features = ["derive"] }
+# libmagic sniffer
+magic = "0.16.*"
 
 # Uses my fixed version
 magika = { version = "0.1.0-dev", path = "../magika/rust", optional = true }

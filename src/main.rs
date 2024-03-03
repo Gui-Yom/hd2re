@@ -1,8 +1,7 @@
-use std::fs;
-
-use hd2re::convert::convert_all_to_wav;
 use speedy::{Readable, Writable};
+use strum::IntoEnumIterator;
 
+use hd2re::hash::{stingray_hash, Dictionary};
 use hd2re::index::HD2Index;
 use hd2re::parse::DataType;
 use hd2re::sniff::libmagic::LibMagicSniff;
@@ -12,6 +11,7 @@ fn main() {
     // println!("{:x}", stringray_hash(b"packages/pre_boot"));
     // println!("{:x}", stringray_hash(b"packages/boot"));
     // println!("{:x}", stringray_hash(b"texture"));
+    println!("{:x}", stingray_hash(b"hash_lookup"));
     let index = if let Ok(hd2fs) = HD2Index::read_from_file("hd2index.bin") {
         println!("Loading saved hd2index.");
         hd2fs
@@ -22,6 +22,29 @@ fn main() {
         hd2fs
     };
     println!("Loaded metadata for {} assets", index.len());
+
+    let dictionary = Dictionary::load("dictionary.txt");
+    println!("Loaded dictionary. ({} entries)", dictionary.len());
+
+    for id in index.ids() {
+        if let Some(name) = dictionary.get(id) {
+            // The hash comes from a file name so it most probably contains a '/'
+            if name.contains('/') {
+                println!("match: {} -> {}", id, name);
+            } else {
+                println!("false match: {} -> {}", id, name);
+            }
+        }
+    }
+
+    for ty in DataType::iter() {
+        if let Some(name) = dictionary.get(ty as u64) {
+            println!("match: {:?} -> {}", ty, name);
+        }
+    }
+
+    dbg!(DataType::iter().count());
+
     let magika_sniff = if let Ok(sniff) = MagikaSniff::read_from_file("hd2sniff.magika.bin") {
         println!("Loading saved magika sniff.");
         sniff
@@ -68,15 +91,15 @@ fn main() {
     // }
 
     // Dump WAV
-    fs::create_dir_all("data/audio/wem").unwrap();
-    for key in index.ids() {
-        if index[key].record.type_id == DataType::WEM {
-            fs::write(
-                format!("data/audio/wem/{key:016x}.wem"),
-                index.load_stream_bytes(key).unwrap(),
-            )
-            .unwrap();
-        }
-    }
-    convert_all_to_wav();
+    // fs::create_dir_all("data/audio/wem").unwrap();
+    // for key in index.ids() {
+    //     if index[key].record.type_id == DataType::WEM {
+    //         fs::write(
+    //             format!("data/audio/wem/{key:016x}.wem"),
+    //             index.load_stream_bytes(key).unwrap(),
+    //         )
+    //         .unwrap();
+    //     }
+    // }
+    // convert_all_to_wav();
 }

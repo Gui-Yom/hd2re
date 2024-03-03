@@ -21,6 +21,13 @@ pub struct HD2Index {
     items: AssetMap<Entry>,
 }
 
+#[derive(Readable, Writable)]
+pub struct Entry {
+    /// File where this asset is contained
+    pub file_id: u64,
+    pub record: DataRecord,
+}
+
 impl HD2Index {
     pub fn create_index(path: impl AsRef<Path>) -> Self {
         let path = path.as_ref();
@@ -137,11 +144,4 @@ impl Index<u64> for HD2Index {
     fn index(&self, index: u64) -> &Self::Output {
         &self.items[&index]
     }
-}
-
-#[derive(Readable, Writable)]
-pub struct Entry {
-    /// File where this asset is contained
-    pub file_id: u64,
-    pub record: DataRecord,
 }

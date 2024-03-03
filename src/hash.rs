@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+use std::fs;
 use std::hash::{BuildHasher, Hasher};
+use std::path::Path;
 
 /// murmur64a with a seed of 0
-pub fn stringray_hash(key: &[u8]) -> u64 {
+pub fn stingray_hash(key: &[u8]) -> u64 {
     let m: u64 = 0xc6a4a7935bd1e995;
     let r: u8 = 47;
 
@@ -86,5 +89,32 @@ impl BuildHasher for NoHash {
 
     fn build_hasher(&self) -> Self::Hasher {
         NoHashHasher(0)
+    }
+}
+
+#[derive(Debug)]
+pub struct Dictionary {
+    map: HashMap<u64, String, NoHash>,
+}
+
+impl Dictionary {
+    pub fn load(path: impl AsRef<Path>) -> Self {
+        let mut map = HashMap::with_hasher(NoHash);
+        for line in fs::read_to_string(path).unwrap().lines() {
+            if line.is_empty() || line.starts_with("//") {
+                continue;
+            }
+            let hash = stingray_hash(line.as_bytes());
+            map.insert(hash, line.to_string());
+        }
+        Self { map }
+    }
+
+    pub fn get(&self, hash: u64) -> Option<&str> {
+        self.map.get(&hash).map(|s| s.as_str())
+    }
+
+    pub fn len(&self) -> usize {
+        self.map.len()
     }
 }
