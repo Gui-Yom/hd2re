@@ -1,3 +1,4 @@
+pub mod convert;
 pub mod hash;
 pub mod index;
 pub mod parse;

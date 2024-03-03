@@ -1,10 +1,12 @@
 use std::fs;
 
+use hd2re::convert::convert_all_to_wav;
 use speedy::{Readable, Writable};
 
 use hd2re::index::HD2Index;
 use hd2re::parse::DataType;
-use hd2re::sniff::{LibMagicSniff, MagikaSniff};
+use hd2re::sniff::libmagic::LibMagicSniff;
+use hd2re::sniff::magika::MagikaSniff;
 
 fn main() {
     // println!("{:x}", stringray_hash(b"packages/pre_boot"));
@@ -66,14 +68,15 @@ fn main() {
     // }
 
     // Dump WAV
-    fs::create_dir_all("dump/audio").unwrap();
+    fs::create_dir_all("data/audio/wem").unwrap();
     for key in index.ids() {
         if index[key].record.type_id == DataType::WEM {
             fs::write(
-                format!("dump/audio/{key:016x}.wem"),
+                format!("data/audio/wem/{key:016x}.wem"),
                 index.load_stream_bytes(key).unwrap(),
             )
             .unwrap();
         }
     }
+    convert_all_to_wav();
 }

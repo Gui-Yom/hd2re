@@ -1,5 +1,7 @@
 /target
 /.idea
-/hd2index.bin
-/hd2sniff.magika.bin
-/hd2sniff.libmagic.bin
+/*.bin
+/*.engine
+/*.timing
+/*.profile
+/data
